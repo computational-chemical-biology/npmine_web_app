@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
-
-{% block bannercontent %}
+{% block title %}NPMINE | Download Compounds{% endblock %}
+{% block newcompoundcontent %}
 <!-- Banner -->
 <div class="container">
   <nav class="navbar navbar-expand-lg bg-body-tertiary">
@@ -14,7 +14,7 @@
                 Hello, {{ current_user.username }}!
               </a>
               <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                <a class="dropdown-item" href="{{ url_for('main.profile', profile_id=current_user.id) }}">My Profile</a>
+                <a class="dropdown-item" href="{{ url_for('main.profile', profile_id=current_user.id) }}">My Compounds</a>
                 <!-- Add more dropdown items as needed -->
               </div>
             </div>
@@ -35,14 +35,14 @@
           <li class="nav-item">
             <a class="nav-link" href="https://github.com/computational-chemical-biology/npmine_web_app">Documentation</a>
           </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/search_menu">Search</a>
+          </li>
           {% if current_user.is_authenticated and current_user.role.name == 'admin' %}
           <li class="nav-item">
             <a class="nav-link" href="{{ url_for('users.admin_panel') }}">Control Panel</a>
           </li>
           {% endif %}
-          <li class="nav-item">
-            <a class="nav-link" href="/search_menu">Search</a>
-          </li>
         </ul>
       </div>
       {% if logged_in %}
@@ -115,75 +115,53 @@
       <span class="visually-hidden">Next</span>
     </button>
   </div>
-<div class="container text-center">
-    <br>
-  <h1>Control Panel</h1>
-
-  <form method="POST">
-    <table class="table table-bordered">
-      <thead>
-        <tr>
-          <th>User</th>
-          <th>Role</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for user in users %}
-          <tr>
-            <td>{{ user.username }}</td>
-            <td>
-              <select name="user_role_{{ user.id }}" class="form-select">
-                {% for role in roles %}
-                  <option value="{{ role.id }}" {% if user.role_id == role.id %}selected{% endif %}>{{ role.name }}</option>
-                {% endfor %}
-              </select>
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    <button type="submit" class="btn btn-outline-dark">Update Roles</button>
-  </form>
-</div>
-<br>
-<section class="page-section" id="about">
     <div class="container">
-        <h2 class="page-section-heading text-center text-uppercase mb-0" style="color: #000000"><b>About NPMINE</b></h2>
-        <div class="divider-custom">
-            <div class="divider-custom-line"></div>
-            <div class="divider-custom-icon"><i class="fas fa-atom"></i></div>
-            <div class="divider-custom-line"></div>
-        </div>
-        <div class="row justify-content-center">
-            <div class="col-md-6 col-lg-4 mb-5">
-              <img class="img-fluid" src="/static/assets/img/npmine_report_terminal.png" alt="..." />
-            </div>
-            <div class="col-md-6 col-lg-8 mb-5">
-              <br>
-              <br>
-              <p style="font-family: 'Quicksand', sans-serif; font-size: 20px; text-align: center;">NPMINE (Natural Products MINing) is an open-source modular tool that utilizes text mining techniques to extract chemical entities, which may include natural products (NPs), and taxonomic mentions from scientific literature. This online database serves the purpose of storing information that have been extracted by NPMINE, thereby enabling searches and analyses.</p>
-            </div>
-        </div>
+        <head>
+            <title>Download Compounds</title>
+        </head>
+        <body>
+            <br>
+            <br>
+            <h1>Public Compounds</h1>
+            <p>Click the button below to download the list of publicly available compounds as a CSV file.</p>
+            <a href="{{ url_for('compounds.download_compounds', download=True) }}" class="btn btn-outline-dark mx-2">Download CSV</a>
+        </body>
     </div>
+<section class="page-section" id="about">
+  <div class="container">
+      <h2 class="page-section-heading text-center text-uppercase mb-0" style="color: #000000"><b>About NPMINE</b></h2>
+      <div class="divider-custom">
+          <div class="divider-custom-line"></div>
+          <div class="divider-custom-icon"><i class="fas fa-atom"></i></div>
+          <div class="divider-custom-line"></div>
+      </div>
+      <div class="row justify-content-center">
+          <div class="col-md-6 col-lg-4 mb-5">
+            <img class="img-fluid" src="/static/assets/img/npmine_report_terminal.png" alt="..." />
+          </div>
+          <div class="col-md-6 col-lg-8 mb-5">
+            <br>
+            <br>
+            <p style="font-family: 'Quicksand', sans-serif; font-size: 20px; text-align: center;">NPMINE (Natural Products MINing) is an open-source modular tool that utilizes text mining techniques to extract chemical entities, which may include natural products (NPs), and taxonomic mentions from scientific literature. This online database serves the purpose of storing information that have been extracted by NPMINE, thereby enabling searches and analyses.</p>
+          </div>
+      </div>
+  </div>
 </section>
 <br>
 <footer class="footer text-center" style="background-color: #000000">
-  <div class="container" style="color: #ffffff">
-      <br>
-      <div class="row">
-        <div>
-          <p class="lead mb-0" style="text-align: justify; font-size: 15px">
-           <a href="https://github.com/computational-chemical-biology/npmine">NPMINE</a> and <a href="https://github.com/computational-chemical-biology/npmine_web_app">NPMINE Online Database</a> is a freely accessible and community-driven digital platform. Users are invited to report bugs, make feature requests, and communicate general issues via the <a href="https://github.com/computational-chemical-biology/npmine_web_app/issues">issues tracker on GitHub.</a> The development and maintenance of NPMINE and NPMINE Online Database are overseen by the <a href="http://ccbl.fcfrp.usp.br/ccbl/index.html">Computational Chemical Biology group</a>, based at the <a href="https://fcfrp.usp.br/en/">School of Pharmaceutical Sciences</a> in Ribeirão Preto - SP, Brazil.
-          </p>
-        </div>
-          <div>
-              <a class="btn btn-social mx-1" href="https://github.com/computational-chemical-biology/npmine"><img src="static/assets/img/github.webp" width="30"><!--<i class="fas fa-download"></i>--></a>
-          </div> 
+<div class="container" style="color: #ffffff">
+    <br>
+    <div class="row">
+      <div>
+        <p class="lead mb-0" style="text-align: justify; font-size: 15px">
+         <a href="https://github.com/computational-chemical-biology/npmine">NPMINE</a> and <a href="https://github.com/computational-chemical-biology/npmine_web_app">NPMINE Online Database</a> is a freely accessible and community-driven digital platform. Users are invited to report bugs, make feature requests, and communicate general issues via the <a href="https://github.com/computational-chemical-biology/npmine_web_app/issues">issues tracker on GitHub.</a> The development and maintenance of NPMINE and NPMINE Online Database are overseen by the <a href="http://ccbl.fcfrp.usp.br/ccbl/index.html">Computational Chemical Biology group</a>, based at the <a href="https://fcfrp.usp.br/en/">School of Pharmaceutical Sciences</a> in Ribeirão Preto - SP, Brazil.
+        </p>
       </div>
-      <br>
-  </div>
+        <div>
+            <a class="btn btn-social mx-1" href="https://github.com/computational-chemical-biology/npmine"><img src="static/assets/img/github.webp" width="30"><!--<i class="fas fa-download"></i>--></a>
+        </div> 
+    </div>
+    <br>
+</div>
 </footer>
-{% endblock bannercontent %}
-
-
-
+{% endblock %}

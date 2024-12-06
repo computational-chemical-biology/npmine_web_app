@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, flash, redirect, url_for, request, current_app, g,jsonify
+from flask import Blueprint, render_template, flash, redirect, url_for, request, current_app, g,jsonify, Response
 from flask_login import login_required, current_user
 from websiteNPMINE.compounds.forms import CompoundForm, SearchForm, CompoundEditForm
 from websiteNPMINE.models import Compounds,DOI,Taxa
@@ -17,6 +17,8 @@ from rdkit.Chem.Fingerprints import FingerprintMols
 from werkzeug.utils import secure_filename
 from urllib.parse import quote
 from websiteNPMINE import csrf
+from io import StringIO
+import csv
 
 compounds = Blueprint('compounds', __name__)
 
@@ -70,6 +72,7 @@ def registerCompound():
         for i, inchikey in enumerate(compound_blocks):
             genus = request.form.getlist('genus')[i]
             species = request.form.getlist('species')[i]
+            origin_type = request.form.getlist('origin_type')[i]  # Get the origin type
 
             if not inchikey:
                 flash(f'InChI Key is required for Compound {i + 1}', 'error')
@@ -462,7 +465,33 @@ def edit_compound(id):
 
     return render_template('editCompound.html', form=form, compound=compound, related_taxa=related_taxa, logged_in=logged_in)
 
+@compounds.route('/download_compounds', methods=['GET'])
+def download_compounds():
+    # Query all publicly available compounds
+    compounds = Compounds.query.filter_by(status='public').all()
 
+    if 'download' in request.args:  # Check if the user triggered the download
+        # Create a CSV in memory
+        output = StringIO()
+        writer = csv.DictWriter(output, fieldnames = [
+        'id', 'journal', 'compound_name', 'compound_image', 'smiles', 'article_id',
+        'inchi', 'inchikey', 'exactmolwt', 'pubchem', 'source', 'user_id', 
+        'status', 'class_results', 'superclass_results', 'pathway_results', 'isglycoside'
+        ])
+        writer.writeheader()
 
+        # Write compound data to the CSV
+        for compound in compounds:
+            writer.writerow(compound.to_dict())
 
+        output.seek(0)
 
+        # Create a Response to send the CSV file as a downloadable attachment
+        return Response(
+            output.getvalue(),
+            mimetype='text/csv',
+            headers={'Content-Disposition': 'attachment; filename=compounds.csv'}
+        )
+
+    # Render the template when not downloading
+    return render_template('download_compounds.html', compounds=compounds)
