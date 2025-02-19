@@ -31,15 +31,6 @@ conn = psycopg2.connect(
     password=DB_PASSWORD
 )
 
-#Para local
-#conn = psycopg2.connect(
-#    host="localhost",
-#    port=5434,
-#    database="npmine",
-#    user="postgres",
-#    password="1393"
-#)
-
 # Create a cursor object to execute SQL queries
 cursor = conn.cursor()
 

@@ -7,6 +7,7 @@ dependencies:
   - backcall=0.2.0
   - backports=1.0
   - backports.functools_lru_cache=1.6.5
+  - babel==2.16.0
   - beautifulsoup4=4.12.2
   - boost=1.78.0
   - boost-cpp=1.78.0
@@ -23,14 +24,15 @@ dependencies:
   - cycler=0.11.0
   - decorator=5.1.1
   - dnspython=2.3.0
+  - elastic-transport==8.15.0
+  - elasticsearch==8.15.0
   - email-validator=1.3.1
   - email_validator=1.3.1
   - executing=1.2.0
   - expat=2.5.0
-  - flask
-  - flask-babel 
-  - Flask-Script
-  - flask-mail
+  - flask==2.3.2
+  - flask-babel==4.0.0
+  - flask-mail==0.10.0
   - font-ttf-dejavu-sans-mono=2.37
   - font-ttf-inconsolata=3.000
   - font-ttf-source-code-pro=2.038
@@ -119,6 +121,7 @@ dependencies:
   - typing_extensions=4.7.1
   - tzdata=2023c
   - wcwidth=0.2.6
+  - werkzeug=2.3.4
   - wheel=0.38.4
   - xorg-libxau=1.0.11
   - xorg-libxdmcp=1.1.3
@@ -152,5 +155,4 @@ dependencies:
       - tqdm==4.65.0
       - typing-extensions==4.6.3
       - urllib3==2.0.3
-      - werkzeug==2.3.4
       - wtforms==3.0.1
