@@ -41,7 +41,7 @@ services:
       - "5000:5000"
     volumes:
       - .:/app 
-    command: bash -c "conda run -n npmine_web_app_prod flask db upgrade && conda run -n npmine_web_app_prod python populate_database.py && conda run -n npmine_web_app_prod flask run --host 0.0.0.0 --port 5000"
+    command: bash -c "conda run -n npmine_web_app_prod flask db upgrade && conda run -n npmine_web_app_prod && conda run -n npmine_web_app_prod flask run --host 0.0.0.0 --port 5000"
 
 volumes:
   postgres_data:
