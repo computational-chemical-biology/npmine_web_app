@@ -22,30 +22,14 @@ def data():
     start = request.args.get('start', type=int, default=0)
     length = request.args.get('length', type=int, default=10)
     show_deleted = request.args.get('show_deleted', 'false').lower() == 'true'
-    search_term = request.args.get('search', None)
+    search_term = request.args.get('search', '').strip()
+    sort_str = request.args.get('sort', '')
 
-    search = request.args.get('search', '').strip()
-    search_query = or_(
-        Compounds.id.like(f'%{search}%'),
-        Compounds.compound_name.like(f'%{search}%')
-    )
-
-    sort = request.args.get('sort', '')
-    sort_columns = ['id', 'compound_name'] 
-    order = []
-    for field in sort.split(','):
-        direction = '-' if field.startswith('-') else ''
-        name = field.lstrip('-')
-        if name not in sort_columns:
-            name = 'id'
-        col = getattr(Compounds, name)
-        order.append(getattr(col, direction + 'asc')())
-    if not order:
-        order.append(Compounds.id.asc())
-        
     query = Compounds.query
 
-    if not show_deleted:
+    if show_deleted:
+        query = query.filter(Compounds.deleted_at.is_not(None))
+    else:
         query = query.filter(Compounds.deleted_at.is_(None))
 
     if search_term:
@@ -53,28 +37,43 @@ def data():
         query = query.filter(
             or_(
                 Compounds.compound_name.ilike(search_filter),
-                Compounds.inchikey.ilike(search_filter),
-                Compounds.pubchem.ilike(search_filter)
+                Compounds.inchi_key.ilike(search_filter),
+                Compounds.pubchem_id.ilike(search_filter)
             )
         )
+    
     total = query.count()
-    query = query.order_by(*order).offset(start).limit(length)
-    compounds = query.all()
 
+    order = []
+    sort_columns = ['id', 'compound_name', 'inchikey', 'pubchem']
+    
+    if sort_str:
+        for field in sort_str.split(','):
+            if not field:
+                continue
+            
+            if field.startswith('-'):
+                direction = 'desc'
+                name = field.lstrip('-')
+            else:
+                direction = 'asc'
+                name = field
+
+            if name in sort_columns:
+                col = getattr(Compounds, name)
+                order.append(getattr(col, direction)())
+
+    if not order:
+        order.append(Compounds.id.asc())
+        
+    query = query.order_by(*order)
+    query = query.offset(start).limit(length)
+    compounds = query.all()
 
     data = []
     for compound in compounds:
         compound_data = compound.to_dict()
-        compound_data['id'] = compound.id
-        compound_data['compound_name'] = compound.compound_name
-        compound_data['compound_image'] = url_for('static', filename=compound.compound_image) if compound.compound_image else ''
-
-        if current_user.is_authenticated:
-            edit_button = f'<a href="/compound/{compound.id}/edit">Edit</a>'
-            delete_button = f'<a href="/compound/{compound.id}/delete" onclick="return confirm(\'Are you sure you want to delete this compound?\')">Delete</a>'
-            compound_data['Edit'] = edit_button
-            compound_data['Delete'] = delete_button
-
+        compound_data['compound_image'] = url_for('static', filename=compound.compound_image) if compound.compound_image else None
         data.append(compound_data)
 
     return jsonify({'data': data, 'total': total})
@@ -104,7 +103,6 @@ def article(article_id):
     if not doi_record:
         abort(404)
     
-    # Filter compounds: show public compounds or private compounds that belong to the current user
     if logged_in:
         compounds = [compound for compound in doi_record.compounds 
                      if compound.status == 'public' or compound.user_id == current_user.id]
