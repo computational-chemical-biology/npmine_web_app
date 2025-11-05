@@ -6,17 +6,47 @@
 {% include 'components/main-banner.html' %}
 
 {% block tablecontent %}
-<div class="container">
-  <div class="gridjs-controls mt-5" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; margin-top: 10px;">
-    <input type="text" id="search-input" placeholder="Search compounds..." class="gridjs-input">
-    <label for="show-deleted-toggle" style="cursor: pointer;">
-      <input type="checkbox" id="show-deleted-toggle" style="margin-right: 5px;">
-      Show Deleted Records
-    </label>
+<div class="container mt-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 p-3 bg-light rounded shadow-sm">
+    
+    <div class="flex-grow-1 me-3 mb-2 mb-md-0" style="max-width: 300px;">
+      <input 
+        type="text" 
+        id="search-input" 
+        class="form-control form-control-sm shadow-sm" 
+        placeholder="🔍 Search compounds..."
+      >
+    </div>
+
+    <div class="form-check form-switch mb-2 mb-md-0">
+      <input class="form-check-input" type="checkbox" id="show-deleted-toggle">
+      <label class="form-check-label fw-medium" for="show-deleted-toggle">
+        Show Deleted Compounds
+      </label>
+    </div>
+
+    <div class="d-flex align-items-center gap-2 mb-2 mb-md-0">
+      <label for="glycoside-filter" class="form-label mb-0 fw-semibold">
+        Is Glycoside:
+      </label>
+      <select 
+        id="glycoside-filter" 
+        class="form-select form-select-sm w-auto shadow-sm border-secondary"
+      >
+        <option value="all">All</option>
+        <option value="yes">Yes</option>
+        <option value="no">No</option>
+      </select>
+    </div>
+
   </div>
+
   <hr>
+
   <div id="table"></div>
 </div>
+
+
 
 <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
 <script>
@@ -25,7 +55,17 @@
   };
 
   const editButtonFormatter = (cell, row) => {
-    return gridjs.html(`<div style="width: 50px;"><a href="/compound/${cell}/edit">Edit</a></div>`);
+    const compoundId = cell;
+    
+    const compoundOwnerId = row.user_id;
+
+    const canEdit = isAdmin || isEditor || (current_user_id === compoundOwnerId);
+
+    if (canEdit) {
+      return gridjs.html(`<div style="width: 50px;"><a href="/compound/${compoundId}/edit">Edit</a></div>`);
+    }
+
+    return null; 
   };
 
   const deleteButtonFormatter = (cell, row) => {
@@ -90,6 +130,8 @@
     },
   ];
 
+const current_user_id = {{ current_user.id|default(0) }};
+
 const role_id = {{ current_user.role_id|default(0) }};  
 
 const isAdmin = role_id === 1;
@@ -135,6 +177,7 @@ if (isAdmin) {
 
 const searchInput = document.getElementById('search-input');
 const showDeletedToggle = document.getElementById('show-deleted-toggle');
+const glycosideFilterInput = document.getElementById('glycoside-filter'); 
 
 function debounce(func, delay) {
   let timeout;
@@ -150,12 +193,16 @@ function updateAndRender() {
 
   const searchTerm = searchInput.value.trim();
   const showDeleted = showDeletedToggle.checked;
-
+  const glycosideFilter = glycosideFilterInput.value.trim();
+  
   if (searchTerm) {
     params.set('search', searchTerm);
   }
   if (showDeleted) {
     params.set('show_deleted', 'true');
+  }
+  if (glycosideFilter !== 'all') {
+    params.set('is_glycoside', glycosideFilter);
   }
 
   const newUrl = `${baseUrl}?${params.toString()}`;
@@ -170,6 +217,7 @@ function updateAndRender() {
 
 searchInput.addEventListener('input', (updateAndRender)); 
 showDeletedToggle.addEventListener('change', (updateAndRender)); 
+glycosideFilterInput.addEventListener('change', updateAndRender);
 
 grid.render(document.getElementById('table'));
 </script>
