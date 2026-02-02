@@ -195,13 +195,7 @@ def registerCompound():
 
 def fetch_pubchem_data(inchikey):
     try:
-        required_properties = [
-            'canonical_smiles',
-            'inchi',
-            'molecular_weight',
-            'synonyms'
-        ]
-        
+        required_properties = ['canonical_smiles', 'inchi', 'molecular_weight', 'synonyms']
         compound = pcp.get_compounds(inchikey, 'inchikey', properties=required_properties)
         
         if not compound:
@@ -209,19 +203,35 @@ def fetch_pubchem_data(inchikey):
             return None
         
         compoundData = compound[0]
+        
+        smiles = compoundData.canonical_smiles
+        name = compoundData.synonyms[0] if compoundData.synonyms else None
+
+        if not smiles or not name:
+            print(f"DEBUG: Atributos padrão falharam para {inchikey}. Iniciando extração manual...", flush=True)
+            
+            raw_props = vars(compoundData).get('_record', {}).get('props', [])
+            
+            for p in raw_props:
+                label = p.get('urn', {}).get('label')
+                value = p.get('value', {}).get('sval') or p.get('value', {}).get('fval')
+                
+                if not smiles and label == 'SMILES':
+                    smiles = value
+                
+                if not name and label == 'IUPAC Name':
+                    name = value
 
         return {
-            'compound_name': compoundData.synonyms[0] if compoundData.synonyms else None,
-            'smiles': compoundData.canonical_smiles if compoundData.canonical_smiles else None,
+            'compound_name': name,
+            'smiles': smiles,
             'inchi': compoundData.inchi,    
             'exact_molecular_weight': compoundData.molecular_weight,
             'pubchem_id': compoundData.cid
         }
-    except pcp.PubChemHTTPError as e:
-        print(f"PubChem HTTP Error: {e}")
-        return {}
-    except pcp.PubChemPyError as e:
-        print(f"PubChemPy Error: {e}")
+
+    except Exception as e:
+        print(f"Erro na extração: {str(e)}", flush=True)
         return {}
 
 @compounds.route('/search_menu')
