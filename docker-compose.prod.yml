@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:13
+    image: mcs07/postgres-rdkit:12-2020.03.2
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
