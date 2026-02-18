@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, flash, redirect, url_for, request, current_app, g,jsonify, Response, abort
 from flask_login import login_required, current_user
+from websiteNPMINE.compounds.compound_service import CompoundService
 from websiteNPMINE.compounds.forms import CompoundForm, SearchForm, CompoundEditForm
 from websiteNPMINE.models import Compounds,DOI,Taxa, CompoundHistory
 from websiteNPMINE import db
@@ -63,17 +64,39 @@ def registerCompound():
             flash('DOI already in database!', 'info')
 
         compound_blocks = request.form.getlist('inchikey')
+        smiles_blocks = request.form.getlist('smiles')
         for i, inchikey in enumerate(compound_blocks):
+            smiles_input = smiles_blocks[i].strip() if i < len(smiles_blocks) else None
+
             genus = request.form.getlist('genus')[i]
             species = request.form.getlist('species')[i]
-            origin_type = request.form.getlist('origin_type')[i]  
+            origin_type = request.form.getlist('origin_type')[i]
 
-            if not inchikey:
-                flash(f'InChI Key is required for Compound {i + 1}', 'error')
+            inchikey = (inchikey or "").strip()
+
+            if not inchikey and not smiles_input:
+                flash(f'Provide InChIKey or SMILES for Compound {i + 1}', 'error')
                 continue
 
-            existing_compound = Compounds.query.filter_by(inchi_key=inchikey).first()
+            if inchikey:
+                existing_compound = Compounds.query.filter_by(inchi_key=inchikey).first()
 
+            if not inchikey and smiles_input:
+                compound, err = CompoundService.create_from_smiles(
+                    smiles=smiles_input,
+                    doi_obj=existing_doi,
+                    user_id=current_user.id,
+                    current_app=current_app,
+                    db=db
+                )
+
+                if err:
+                    flash(f'Compound {i+1}: {err}', 'error')
+                    continue
+
+                flash(f'Compound {i+1} created from SMILES', 'success')
+                continue
+            
             if existing_compound:
                 # Check if the current user already has this compound
                 user_compound = Compounds.query.filter_by(inchi_key=inchikey, user_id=current_user.id).first()
@@ -203,7 +226,19 @@ def fetch_pubchem_data(inchikey):
             return None
         
         compoundData = compound[0]
+
+        record = compoundData.to_dict(properties=[
+            'canonical_smiles',
+            'inchi',
+            'molecular_weight',
+            'iupac_name'
+        ])
         
+        smiles = record.get('canonical_smiles')
+        inchi = record.get('inchi')
+        mw = record.get('molecular_weight')
+        name = record.get('iupac_name')
+       
         smiles = compoundData.canonical_smiles
         name = compoundData.synonyms[0] if compoundData.synonyms else None
 

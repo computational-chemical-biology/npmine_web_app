@@ -130,7 +130,7 @@ class Compounds(db.Model):
     status = db.Column(db.String(10), nullable=False, default='private')
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, nullable=True, default=datetime.utcnow)
-    deleted_at = db.Column(db.DateTime, nullable=True, default=datetime.utcnow)
+    deleted_at = db.Column(db.DateTime, nullable=True)
 
     account = db.relationship("Accounts", backref="compounds")
     dois = db.relationship('DOI', 

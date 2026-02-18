@@ -5,12 +5,28 @@ from flask import request
 from flask_babel import _
 
 class CompoundForm(FlaskForm):
-    doi = StringField('DOI Link', validators=[DataRequired()])
-    inchikey = StringField('InChI Key', validators=[DataRequired()])
+    doi = StringField('DOI Link')
+    inchikey = StringField('InChI Key')
     genus = StringField('Genus', validators=[Optional()])
     origin_type = SelectField('Origin Type', choices=[('Bacteria', 'Bacteria'), ('Fungi', 'Fungi')])
     species = StringField('Species', default='sp', validators=[Optional()])
+    smiles = StringField("SMILES")
     submit = SubmitField('Submit')
+
+    def validate(self, extra_validators=None):
+        if not super().validate(extra_validators):
+            return False
+
+        inchikey = (self.inchikey.data or "").strip()
+        smiles = (self.smiles.data or "").strip()
+
+        if not inchikey and not smiles:
+            msg = "Provide InChIKey OR SMILES"
+            self.inchikey.errors.append(msg)
+            self.smiles.errors.append(msg)
+            return False
+
+        return True
 
 class SearchForm(FlaskForm):
     q = StringField(_('Search'), validators=[DataRequired()])

@@ -6,130 +6,142 @@
 {% include 'components/navbar.html' %}
 {% include 'components/main-banner.html' %}
 
-    <div class="container">
-        <div class="row">
-            <div class="col-sm-9 col-md-7 col-lg-5 mx-auto">
-                <div class="card border-0 shadow rounded-3 my-5">
-                    <div class="card-body p-4 p-sm-5">
-                        <h5 class="card-title text-center mb-5 fw-light fs-5">Register Compound</h5>
-                        <p style="text-align: center;">To deposit a new compound to the NPmine, please fill in the below form with the InChI Key, as well as the details about producing organism (genus + species) if available.</p>
-                        <br>
-                        <!-- DOI link input field -->
-                        <form method="POST" action="{{ url_for('compounds.registerCompound') }}">
-                            {{ form.hidden_tag() }}
-                            <fieldset class="form-group">
-                                <div class="form-group">
-                                    <label for="doi">DOI Link:</label>
-                                    <input type="text" class="form-control" id="doi" name="doi" required>
-                                </div>
-                            </fieldset>
-                            <!-- End of DOI link input field -->
-
-                            <!-- Compound registration form -->
-                            <fieldset class="form-group" id="compounds">
-                                <!-- Compound registration blocks -->
-                                <div class="compoundBlock" id="compound_1">
-                                    <!-- Compound 1 -->
-                                    <h6>Compound 1</h6>
-                                    <!-- InChI Key -->
-                                    <div class="form-group">
-                                        {{ form.inchikey.label(class="form-control-label") }}
-                                        {% if form.inchikey.errors %}
-                                        {{ form.inchikey(class="form-control form-control-lg is-invalid") }}
-                                        <div class="invalid-feedback">
-                                            {% for error in form.inchikey.errors %}
-                                            <span>{{ error }}</span>
-                                            {% endfor %}
-                                        </div>
-                                        {% else %}
-                                        {{ form.inchikey(class="form-control form-control-lg") }}
-                                        {% endif %}
-                                    </div>
-                                    <!-- Genus -->
-                                    <div class="form-group">
-                                        <label for="genus_1">Genus:</label>
-                                        <input type="text" class="form-control" id="genus_1" name="genus">
-                                    </div>
-                                    <!-- Origin Type -->
-                                    <div class="form-group">
-                                        <label for="origin_type_1">Origin Type:</label>
-                                        <select class="form-control" id="origin_type_1" name="origin_type">
-                                            <option value="Bacteria">Bacteria</option>
-                                            <option value="Fungi">Fungi</option>
-                                        </select>
-                                    </div>
-                                    <!-- Species -->
-                                    <div class="form-group">
-                                        <label for="species_1">Species:</label>
-                                        <input type="text" class="form-control" id="species_1" name="species" value="sp">
-                                    </div>
-                                    <!-- Delete button -->
-                                    <button type="button" class="btn btn-danger btn-sm deleteCompound">Delete</button>
-                                    <!-- Spacing -->
-                                    <br><br>
-                                </div>
-                                <!-- End of Compound 1 -->
-                            </fieldset>
-                            <!-- End of Compound registration form -->
-
-                            <!-- Add Compound button -->
-                            <button type="button" id="addCompound" class="btn btn-secondary">Add Compound</button>
-                            <br><br>
-                            <!-- Submit button -->
-                            <div class="form-group d-flex justify-content-end">
-                                {{ form.submit(class="btn btn-success") }}
+<div class="container">
+    <div class="row">
+        <div class="col-sm-9 col-md-7 col-lg-5 mx-auto">
+            <div class="card border-0 shadow rounded-3 my-5">
+                <div class="card-body p-4 p-sm-5">
+                    <h5 class="card-title text-center mb-5 fw-light fs-5">Register Compound</h5>
+                    <p style="text-align: center;">To deposit a new compound to the NPmine, please fill in the below
+                        form with the InChI Key, as well as the details about producing organism (genus + species) if
+                        available.</p>
+                    <br>
+                    <!-- DOI link input field -->
+                    <form method="POST" action="{{ url_for('compounds.registerCompound') }}">
+                        {{ form.hidden_tag() }}
+                        <fieldset class="form-group">
+                            <div class="form-group">
+                                <label for="doi">DOI Link:</label>
+                                <input type="text" class="form-control" id="doi" name="doi" required>
                             </div>
-                            <br>
-                        </form>
-                    </div>
+                        </fieldset>
+                        <!-- End of DOI link input field -->
+
+                        <!-- Compound registration form -->
+                        <fieldset class="form-group" id="compounds">
+                            <!-- Compound registration blocks -->
+                            <div class="compoundBlock" id="compound_1">
+                                <!-- Compound 1 -->
+                                <h6>Compound 1</h6>
+                                <!-- InChI Key -->
+                                <div class="form-group">
+                                    {{ form.inchikey.label(class="form-control-label") }}
+                                    {% if form.inchikey.errors %}
+                                    {{ form.inchikey(class="form-control form-control-lg is-invalid") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.inchikey.errors %}
+                                        <span>{{ error }}</span>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    {{ form.inchikey(class="form-control form-control-lg") }}
+                                    {% endif %}
+                                </div>
+                                <!-- SMILES -->
+                                <div class="form-group">
+                                    {{ form.smiles.label(class="form-control-label") }}
+                                    {% if form.smiles.errors %}
+                                    {{ form.smiles(class="form-control form-control-lg is-invalid") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.smiles.errors %}
+                                        <span>{{ error }}</span>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    {{ form.smiles(class="form-control form-control-lg") }}
+                                    {% endif %}
+                                </div>
+                                <!-- Genus -->
+                                <div class="form-group">
+                                    <label for="genus_1">Genus:</label>
+                                    <input type="text" class="form-control" id="genus_1" name="genus">
+                                </div>
+                                <!-- Origin Type -->
+                                <div class="form-group">
+                                    <label for="origin_type_1">Origin Type:</label>
+                                    <select class="form-control" id="origin_type_1" name="origin_type">
+                                        <option value="Bacteria">Bacteria</option>
+                                        <option value="Fungi">Fungi</option>
+                                    </select>
+                                </div>
+                                <!-- Species -->
+                                <div class="form-group">
+                                    <label for="species_1">Species:</label>
+                                    <input type="text" class="form-control" id="species_1" name="species" value="sp">
+                                </div>
+                                <!-- Delete button -->
+                                <button type="button" class="btn btn-danger btn-sm deleteCompound">Delete</button>
+                                <!-- Spacing -->
+                                <br><br>
+                            </div>
+                            <!-- End of Compound 1 -->
+                        </fieldset>
+                        <!-- End of Compound registration form -->
+
+                        <!-- Add Compound button -->
+                        <button type="button" id="addCompound" class="btn btn-secondary">Add Compound</button>
+                        <br><br>
+                        <!-- Submit button -->
+                        <div class="form-group d-flex justify-content-end">
+                            {{ form.submit(class="btn btn-success") }}
+                        </div>
+                        <br>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <script>
-        document.getElementById('addCompound').addEventListener('click', function() {
-            var compoundsDiv = document.getElementById('compounds');
-            var compoundCount = compoundsDiv.getElementsByClassName('compoundBlock').length + 1;
+<script>
+    document.getElementById('addCompound').addEventListener('click', function () {
+        var compoundsDiv = document.getElementById('compounds');
+        var compoundCount = compoundsDiv.getElementsByClassName('compoundBlock').length + 1;
 
-            // Clone the first compound block
-            var firstCompoundBlock = document.getElementById('compound_1');
-            var newCompoundBlock = firstCompoundBlock.cloneNode(true);
+        // Clone the first compound block
+        var firstCompoundBlock = document.getElementById('compound_1');
+        var newCompoundBlock = firstCompoundBlock.cloneNode(true);
 
-            // Update IDs and names
-            newCompoundBlock.id = 'compound_' + compoundCount;
-            newCompoundBlock.getElementsByTagName('h6')[0].textContent = 'Compound ' + compoundCount;
+        // Update IDs and names
+        newCompoundBlock.id = 'compound_' + compoundCount;
+        newCompoundBlock.getElementsByTagName('h6')[0].textContent = 'Compound ' + compoundCount;
 
-            var inputs = newCompoundBlock.querySelectorAll('input, select');
-            inputs.forEach(function(input) {
-                input.name = input.name.replace('[1]', '[' + compoundCount + ']');
-                input.value = ''; // Clear input values
-            });
-
-            var buttons = newCompoundBlock.querySelectorAll('button');
-            buttons.forEach(function(button) {
-                button.addEventListener('click', function() {
-                    newCompoundBlock.remove();
-                    updateCompoundHeaders();
-                });
-            });
-
-            // Append the new compound block
-            compoundsDiv.appendChild(newCompoundBlock);
-
-            // Update headers
-            function updateCompoundHeaders() {
-                var compoundBlocks = compoundsDiv.getElementsByClassName('compoundBlock');
-                for (var i = 0; i < compoundBlocks.length; i++) {
-                    compoundBlocks[i].getElementsByTagName('h6')[0].textContent = 'Compound ' + (i + 1);
-                }
-            }
+        var inputs = newCompoundBlock.querySelectorAll('input, select');
+        inputs.forEach(function (input) {
+            input.name = input.name.replace('[1]', '[' + compoundCount + ']');
+            input.value = ''; // Clear input values
         });
-    </script>
+
+        var buttons = newCompoundBlock.querySelectorAll('button');
+        buttons.forEach(function (button) {
+            button.addEventListener('click', function () {
+                newCompoundBlock.remove();
+                updateCompoundHeaders();
+            });
+        });
+
+        // Append the new compound block
+        compoundsDiv.appendChild(newCompoundBlock);
+
+        // Update headers
+        function updateCompoundHeaders() {
+            var compoundBlocks = compoundsDiv.getElementsByClassName('compoundBlock');
+            for (var i = 0; i < compoundBlocks.length; i++) {
+                compoundBlocks[i].getElementsByTagName('h6')[0].textContent = 'Compound ' + (i + 1);
+            }
+        }
+    });
+</script>
 </div>
 {% include 'components/footer.html' %}
 {% endblock %}
-
-
-
-

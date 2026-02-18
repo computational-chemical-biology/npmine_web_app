@@ -1,6 +1,10 @@
+import os
 import requests
 from bs4 import BeautifulSoup
 import json
+from rdkit import Chem
+from rdkit.Chem import Draw
+from flask import current_app
 
 def cpd2prop(inchikey):
     url = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/InChIKey/%s/property/MolecularFormula,XLogP,ExactMass,Charge/JSON" % inchikey
@@ -27,3 +31,19 @@ def cpd2prop(inchikey):
             d['subclass'] = cd['subclass']['name']
 
     return d
+
+def save_compound_image(compound_id, smiles):
+    filename = f"{compound_id}.png"
+    relative_path = os.path.join('compound_images', filename)
+    
+    relative_path = os.path.normpath(relative_path).replace("\\", "/")
+
+    full_path = os.path.join(current_app.root_path, 'static', relative_path)
+
+    os.makedirs(os.path.dirname(full_path), exist_ok=True)
+
+    mol = Chem.MolFromSmiles(smiles)
+    img = Draw.MolToImage(mol, size=(200, 200))
+    img.save(full_path)
+
+    return relative_path
