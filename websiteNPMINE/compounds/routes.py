@@ -50,10 +50,6 @@ def registerCompound():
     if form.validate_on_submit():
         doi = form.doi.data
 
-        if not doi:
-            flash('DOI Link is required', 'error')
-            return redirect(request.url)
-
         existing_doi = DOI.query.filter_by(doi=doi).first()
         if not existing_doi:
             new_doi = DOI(doi=doi)
