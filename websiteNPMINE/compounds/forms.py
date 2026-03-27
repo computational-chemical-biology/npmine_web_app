@@ -58,7 +58,10 @@ class CompoundEditForm(FlaskForm):
     inchi_key = StringField('InChI Key')
     inchi = StringField('InChI')
     article_url = StringField('Article URL')
-    ispublic = SelectField('Visualization', choices=[('True', 'Public'), ('False', 'Private')])
+    status = SelectField('Visualization', choices=[
+        ('public', 'Public'), 
+        ('private', 'Private')
+    ])
 
     dois = FieldList(FormField(DOIForm), min_entries=1)
     taxa = FieldList(FormField(TaxaForm), min_entries=1)

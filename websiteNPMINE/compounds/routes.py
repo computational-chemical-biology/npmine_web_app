@@ -527,7 +527,7 @@ def edit_compound(id):
         compound.pubchem_id = form.pubchem_id.data or compound.pubchem_id
         compound.inchi = form.inchi.data or compound.inchi
         compound.article_url = form.article_url.data or compound.article_url
-        compound.ispublic = (form.ispublic.data == 'True')
+        compound.status = form.status.data
         compound.inchi_key = form.inchi_key.data or compound.inchi_key
 
         print("DOIs before update:", [d.doi for d in compound.dois])

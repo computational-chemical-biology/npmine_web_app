@@ -100,12 +100,12 @@ def data():
 
     if current_user.is_authenticated:
         ownership_filter = or_(
-            Compounds.ispublic == True,
+            Compounds.status == 'public',
             Compounds.user_id == current_user.id
         )
         base_query = base_query.filter(ownership_filter)
     else:
-        base_query = base_query.filter(Compounds.ispublic == True)
+        base_query = base_query.filter(Compounds.status == 'public')
 
     if is_glycoside_filter == 'yes':
         base_query = base_query.filter(Compounds.isglycoside == True)
