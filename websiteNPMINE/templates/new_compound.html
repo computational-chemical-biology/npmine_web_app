@@ -14,10 +14,15 @@
                     <h5 class="card-title text-center mb-5 fw-light fs-5">Register Compound</h5>
                     <p style="text-align: center;">To deposit a new compound to the NPmine, please fill in the below
                         form with the InChI Key, as well as the details about producing organism (genus + species) if
-                        available.</p>
+                        available.
+                    </p>
+                    <p class="text-muted" style="text-align: center;">
+                        Preferred identifiers are SMILES or InChI. If both are present, SMILES is used. InChIKey-only
+                        submissions may require PubChem.
+                    </p>
                     <br>
                     <!-- DOI link input field -->
-                    <form method="POST" action="{{ url_for('compounds.registerCompound') }}">
+                    <form method="POST" action="{{ url_for('compounds.registerCompound') }}" autocomplete="off">
                         {{ form.hidden_tag() }}
                         <fieldset class="form-group">
                             <div class="form-group">
@@ -33,46 +38,57 @@
                             <div class="compoundBlock" id="compound_1">
                                 <!-- Compound 1 -->
                                 <h6>Compound 1</h6>
+                                <!-- Compound Name -->
+                                <div class="form-group">
+                                    {{ form.compound_name.label(class="form-control-label") }}
+                                    {{ form.compound_name(class="form-control form-control-lg", autocomplete="off") }}
+                                </div>
                                 <!-- InChI Key -->
                                 <div class="form-group">
                                     {{ form.inchikey.label(class="form-control-label") }}
                                     {% if form.inchikey.errors %}
-                                    {{ form.inchikey(class="form-control form-control-lg is-invalid") }}
+                                    {{ form.inchikey(class="form-control form-control-lg is-invalid", autocomplete="off") }}
                                     <div class="invalid-feedback">
                                         {% for error in form.inchikey.errors %}
                                         <span>{{ error }}</span>
                                         {% endfor %}
                                     </div>
                                     {% else %}
-                                    {{ form.inchikey(class="form-control form-control-lg") }}
+                                    {{ form.inchikey(class="form-control form-control-lg", autocomplete="off") }}
+                                    {% endif %}
+                                </div>
+                                <!-- InChI -->
+                                <div class="form-group">
+                                    {{ form.inchi.label(class="form-control-label") }}
+                                    {% if form.inchi.errors %}
+                                    {{ form.inchi(class="form-control form-control-lg is-invalid", autocomplete="off") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.inchi.errors %}
+                                        <span>{{ error }}</span>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    {{ form.inchi(class="form-control form-control-lg", autocomplete="off") }}
                                     {% endif %}
                                 </div>
                                 <!-- SMILES -->
                                 <div class="form-group">
                                     {{ form.smiles.label(class="form-control-label") }}
                                     {% if form.smiles.errors %}
-                                    {{ form.smiles(class="form-control form-control-lg is-invalid") }}
+                                    {{ form.smiles(class="form-control form-control-lg is-invalid", autocomplete="off") }}
                                     <div class="invalid-feedback">
                                         {% for error in form.smiles.errors %}
                                         <span>{{ error }}</span>
                                         {% endfor %}
                                     </div>
                                     {% else %}
-                                    {{ form.smiles(class="form-control form-control-lg") }}
+                                    {{ form.smiles(class="form-control form-control-lg", autocomplete="off") }}
                                     {% endif %}
                                 </div>
                                 <!-- Genus -->
                                 <div class="form-group">
                                     <label for="genus_1">Genus:</label>
                                     <input type="text" class="form-control" id="genus_1" name="genus">
-                                </div>
-                                <!-- Origin Type -->
-                                <div class="form-group">
-                                    <label for="origin_type_1">Origin Type:</label>
-                                    <select class="form-control" id="origin_type_1" name="origin_type">
-                                        <option value="Bacteria">Bacteria</option>
-                                        <option value="Fungi">Fungi</option>
-                                    </select>
                                 </div>
                                 <!-- Species -->
                                 <div class="form-group">
@@ -89,7 +105,7 @@
                         <!-- End of Compound registration form -->
 
                         <!-- Add Compound button -->
-                        <button type="button" id="addCompound" class="btn btn-secondary">Add Compound</button>
+                        <button type="button" id="addCompound" class="btn btn-secondary">Add another compound</button>
                         <br><br>
                         <!-- Submit button -->
                         <div class="form-group d-flex justify-content-end">
@@ -119,7 +135,7 @@
         var inputs = newCompoundBlock.querySelectorAll('input, select');
         inputs.forEach(function (input) {
             input.name = input.name.replace('[1]', '[' + compoundCount + ']');
-            input.value = ''; // Clear input values
+            input.value = input.name === 'species' ? 'sp' : '';
         });
 
         var buttons = newCompoundBlock.querySelectorAll('button');

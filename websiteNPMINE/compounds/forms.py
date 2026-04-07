@@ -6,9 +6,10 @@ from flask_babel import _
 
 class CompoundForm(FlaskForm):
     doi = StringField('DOI Link')
+    compound_name = StringField('Compound Name', validators=[Optional()])
     inchikey = StringField('InChI Key')
+    inchi = StringField('InChI', validators=[Optional()])
     genus = StringField('Genus', validators=[Optional()])
-    origin_type = SelectField('Origin Type', choices=[('Bacteria', 'Bacteria'), ('Fungi', 'Fungi')])
     species = StringField('Species', default='sp', validators=[Optional()])
     smiles = StringField("SMILES")
     submit = SubmitField('Submit')
@@ -18,11 +19,13 @@ class CompoundForm(FlaskForm):
             return False
 
         inchikey = (self.inchikey.data or "").strip()
+        inchi = (self.inchi.data or "").strip()
         smiles = (self.smiles.data or "").strip()
 
-        if not inchikey and not smiles:
-            msg = "Provide InChIKey OR SMILES"
+        if not inchikey and not inchi and not smiles:
+            msg = "Provide InChIKey, InChI, or SMILES"
             self.inchikey.errors.append(msg)
+            self.inchi.errors.append(msg)
             self.smiles.errors.append(msg)
             return False
 
