@@ -41,24 +41,14 @@ def sign_up():
 
     form = RegistrationForm()
 
-    # Log incoming method and whether csrf token exists
     current_app.logger.debug("Sign-up called, method=%s, form_csrf=%s", request.method, form.csrf_token.data)
 
     if form.validate_on_submit():
-        # successful validation path (keep your original logic)
         hashed_password = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
         default_role_id = 3
 
-        base_username = (form.name.data + form.surname.data).lower().replace(" ", "")
-        username = base_username
-        counter = 1
-
-        while Accounts.query.filter_by(username=username).first():
-            username = f"{base_username}{counter}"
-            counter += 1
-
         user = Accounts(
-            username=username,
+            username=form.username.data.strip(),
             name=form.name.data,
             surname=form.surname.data,
             academic_level=form.academic_position.data,
@@ -82,14 +72,10 @@ def sign_up():
             flash('An unexpected error occurred. Please try again later.', 'danger')
 
     else:
-        # Validation failed OR it was a GET. Provide actionable debugging output for POSTs
         if request.method == 'POST':
-            # Log the full errors to the flask logger
             current_app.logger.debug("Form validation failed. errors=%s", form.errors)
-            # Flash each field error for the user (optional, good for dev)
             for field, errors in form.errors.items():
                 for err in errors:
-                    # You may want to suppress flashing CSRF in production
                     flash(f"Error in {field}: {err}", 'danger')
 
     return render_template('signup.html', title='Register', form=form, user=current_user)
@@ -98,8 +84,8 @@ def sign_up():
 @csrf.exempt
 @login_required
 def admin_panel():
-    print("Current user:", current_user)  # Check if the current user object is loaded
-    print("Current user role:", current_user.role)  # Check if the role object is loaded
+    print("Current user:", current_user)
+    print("Current user role:", current_user.role)
 
     if current_user.role.name != 'admin':
         flash('You do not have permission to access this page.', 'danger')
@@ -117,8 +103,8 @@ def admin_panel():
             db.session.commit()
             flash('User roles updated successfully.', 'success')
         except Exception as e:
-            print("Error updating user roles:", e)  # Print the error message
-            db.session.rollback()  # Rollback changes in case of error
+            print("Error updating user roles:", e)
+            db.session.rollback()
 
         return redirect(url_for('users.admin_panel'))
 
