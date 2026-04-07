@@ -163,6 +163,7 @@ def import_compounds_command(file_path, limit, commit_every, skip_existing, with
             if compound:
                 stats['skipped'] += 1
             else:
+                status = 'public'
                 compound_data = {
                     'journal': journal,
                     'smiles': smiles,
@@ -175,7 +176,8 @@ def import_compounds_command(file_path, limit, commit_every, skip_existing, with
                     'user_id': admin.id,
                     'created_at': datetime.utcnow(),
                     'updated_at': datetime.utcnow(),
-                    'ispublic': True,
+                    'status': status,
+                    'ispublic': status == 'public',
                     'compound_name': None,
                 }
 
