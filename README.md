@@ -15,6 +15,8 @@ NPMINE Online Database was created as an extension of [NPMINE](https://github.co
 ```
 SQLALCHEMY_DATABASE_URI=<>
 SECRET_KEY=<>
+FLASK_ENV=development
+GUNICORN_CMD_ARGS=--reload --workers 1
 SQLALCHEMY_TRACK_MODIFICATIONS=False
 TEMP_FOLDER=/app/temp
 MAIL_SERVER=smtp.googlemail.com

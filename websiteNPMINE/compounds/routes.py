@@ -49,6 +49,9 @@ def registerCompound():
 
     if form.validate_on_submit():
         doi = form.doi.data
+        created_count = 0
+        duplicate_count = 0
+        error_count = 0
 
         existing_doi = DOI.query.filter_by(doi=doi).first()
         if not existing_doi:
@@ -60,49 +63,79 @@ def registerCompound():
             flash('DOI already in database!', 'info')
 
         compound_blocks = request.form.getlist('inchikey')
+        compound_name_blocks = request.form.getlist('compound_name')
+        inchi_blocks = request.form.getlist('inchi')
         smiles_blocks = request.form.getlist('smiles')
         for i, inchikey in enumerate(compound_blocks):
+            compound_name_input = compound_name_blocks[i].strip() if i < len(compound_name_blocks) and compound_name_blocks[i] else None
+            inchi_input = inchi_blocks[i].strip() if i < len(inchi_blocks) and inchi_blocks[i] else None
             smiles_input = smiles_blocks[i].strip() if i < len(smiles_blocks) else None
 
             genus = request.form.getlist('genus')[i]
             species = request.form.getlist('species')[i]
-            origin_type = request.form.getlist('origin_type')[i]
 
             inchikey = (inchikey or "").strip()
+            has_valid_inchi = bool(inchi_input and inchi_input.startswith("InChI="))
 
-            if not inchikey and not smiles_input:
-                flash(f'Provide InChIKey or SMILES for Compound {i + 1}', 'error')
+            if not inchikey and not inchi_input and not smiles_input:
+                flash(f'Provide InChIKey, InChI, or SMILES for Compound {i + 1}', 'error')
+                error_count += 1
                 continue
 
-            if inchikey:
-                existing_compound = Compounds.query.filter_by(inchi_key=inchikey).first()
-
-            if not inchikey and smiles_input:
+            if smiles_input:
                 compound, err = CompoundService.create_from_smiles(
                     smiles=smiles_input,
                     doi_obj=existing_doi,
                     user_id=current_user.id,
                     current_app=current_app,
-                    db=db
+                    db=db,
+                    compound_name=compound_name_input,
                 )
 
                 if err:
                     flash(f'Compound {i+1}: {err}', 'error')
+                    error_count += 1
                     continue
-
-                flash(f'Compound {i+1} created from SMILES', 'success')
+                created_count += 1
                 continue
+
+            if inchi_input and not has_valid_inchi and not inchikey:
+                flash(f'Compound {i+1}: InChI must start with \"InChI=\"', 'error')
+                error_count += 1
+                continue
+
+            if has_valid_inchi:
+                compound, err = CompoundService.create_from_inchi(
+                    inchi=inchi_input,
+                    doi_obj=existing_doi,
+                    user_id=current_user.id,
+                    current_app=current_app,
+                    db=db,
+                    compound_name=compound_name_input,
+                )
+
+                if err:
+                    flash(f'Compound {i+1}: {err}', 'error')
+                    error_count += 1
+                    continue
+                created_count += 1
+                continue
+
+            existing_compound = None
+            if inchikey:
+                existing_compound = Compounds.query.filter_by(inchi_key=inchikey).first()
             
             if existing_compound:
                 # Check if the current user already has this compound
                 user_compound = Compounds.query.filter_by(inchi_key=inchikey, user_id=current_user.id).first()
                 if user_compound:
                     flash(f'You already have this compound with InChI Key {inchikey} in your records.', 'info')
+                    duplicate_count += 1
                 else:
                     # Create a new compound entry for the current user
                     new_compound = Compounds(
                         journal=existing_compound.journal,
-                        compound_name=existing_compound.compound_name,
+                        compound_name=compound_name_input or existing_compound.compound_name,
                         smiles=existing_compound.smiles,
                         article_url=existing_compound.article_url,
                         inchi_key=existing_compound.inchi_key,
@@ -130,16 +163,19 @@ def registerCompound():
                         db.session.commit()
 
                     flash(f'Compound with InChI Key {inchikey} duplicated for your account.', 'info')
+                    created_count += 1
             else:
                 pubchem_data = fetch_pubchem_data(inchikey)
 
                 if not pubchem_data:
                     flash(f'Failed to fetch data from PubChem for Compound', 'error')
+                    error_count += 1
                     return render_template('new_compound.html', form=form, logged_in=logged_in)
 
                 smiles = pubchem_data.get('smiles')
                 if not smiles:
                     flash(f'SMILES not found for Compound {i + 1}', 'error')
+                    error_count += 1
                     return render_template('new_compound.html', form=form, logged_in=logged_in)
 
                 # Fetch NP Classifier data
@@ -153,14 +189,16 @@ def registerCompound():
                         isglycoside = np_data.get('isglycoside', False)
                     else:
                         flash(f'Failed to fetch NP Classifier data for Compound {i + 1}', 'error')
+                        error_count += 1
                         continue
                 except Exception as e:
                     flash(f'Error fetching NP Classifier data: {e}', 'error')
+                    error_count += 1
                     continue
 
                 compound = Compounds(
                     journal=None,
-                    compound_name=pubchem_data['compound_name'],
+                    compound_name=compound_name_input or pubchem_data['compound_name'],
                     smiles=smiles,
                     article_url=doi,
                     inchi_key=inchikey,
@@ -184,6 +222,7 @@ def registerCompound():
                 if img_path:
                     compound.compound_image = img_path
                     db.session.commit()
+                created_count += 1
 
             if genus and species:
                 existing_taxon = Taxa.query.filter_by(verbatim=f"{genus} {species}").first()
@@ -203,11 +242,15 @@ def registerCompound():
                 
                 db.session.commit()
 
-        flash('Compounds added successfully!', 'success')
+        if created_count > 0:
+            flash(f'{created_count} compound(s) added successfully!', 'success')
+        elif duplicate_count > 0 and error_count == 0:
+            flash('No new compounds were added.', 'info')
         return redirect(url_for('compounds.registerCompound'))
 
-    for error in form.errors.values():
-        flash(error[0], 'error')
+    if request.method == 'POST':
+        for error in form.errors.values():
+            flash(error[0], 'error')
 
     return render_template('new_compound.html', form=form, logged_in=logged_in)
 
@@ -674,4 +717,3 @@ def download_compounds():
         )
 
     return render_template('download_compounds.html', compounds=compounds, logged_in=logged_in)
-
