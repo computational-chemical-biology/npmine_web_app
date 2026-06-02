@@ -2,9 +2,9 @@ services:
   db:
     image: mcs07/postgres-rdkit:12-2020.03.2
     environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: npmine
+      POSTGRES_USER: npmine
+      POSTGRES_PASSWORD: npmine
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
