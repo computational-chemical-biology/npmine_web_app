@@ -111,7 +111,7 @@ class CompoundService:
                 compound.compound_image = img_path
                 db.session.commit()
 
-            return compound, None
+            return compound, None, "NPClassifier Was Used To Classify Compound"
 
         except Exception as e:
             db.session.rollback()
