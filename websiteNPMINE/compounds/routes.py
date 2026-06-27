@@ -321,13 +321,13 @@ def search():
 
     if q:
         results = Compounds.query \
-            .outerjoin(Compounds.dois) \
+            .outerjoin(Compounds.dois, DOI.doi.ilike(f"%{q}%")) \
             .filter(
                 (Compounds.compound_name.ilike(f"%{q}%") |
                 Compounds.smiles.ilike(f"%{q}%") |
                 Compounds.inchi_key.ilike(f"%{q}%") |
-                DOI.doi.ilike(f"%{q}%")) &
-                (Compounds.status == 'public')  
+                (DOI.id != None)) & 
+                (Compounds.status == 'public')
             ) \
             .order_by(Compounds.compound_name.asc()) \
             .limit(100) \
