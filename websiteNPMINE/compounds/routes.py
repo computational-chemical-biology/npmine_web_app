@@ -1,3 +1,4 @@
+from sqlalchemy import or_, and_
 from flask import Blueprint, render_template, flash, redirect, url_for, request, current_app, g,jsonify, Response, abort
 from flask_login import login_required, current_user
 from websiteNPMINE.compounds.compound_service import CompoundService
@@ -317,17 +318,28 @@ def search_menu():
 @csrf.exempt
 def search():
     logged_in = current_user.is_authenticated
+    current_user_id = current_user.id if logged_in else None
+    
     q = request.args.get("q")
-
+    print(f"Search query: {q}")
+    current_app.logger.info(f"current_user: {current_user}")
+    
     if q:
         results = Compounds.query \
             .outerjoin(Compounds.dois) \
             .filter(
-                (Compounds.compound_name.ilike(f"%{q}%") |
-                Compounds.smiles.ilike(f"%{q}%") |
-                Compounds.inchi_key.ilike(f"%{q}%") |
-                DOI.doi.ilike(f"%{q}%")) &
-                (Compounds.status == 'public')  
+                and_(
+                    or_(
+                        Compounds.compound_name.ilike(f"%{q}%"),
+                        Compounds.smiles.ilike(f"%{q}%"),
+                        Compounds.inchi_key.ilike(f"%{q}%"),
+                        DOI.doi.ilike(f"%{q}%")
+                    ),
+                    or_(
+                        Compounds.status == 'public',
+                        Compounds.user_id == current_user_id
+                    )
+                )
             ) \
             .order_by(Compounds.compound_name.asc()) \
             .limit(100) \
