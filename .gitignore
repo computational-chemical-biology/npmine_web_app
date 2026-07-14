@@ -3,3 +3,4 @@ __pycache__/
 **/log*
 websiteNPMINE/static/compound_images/
 npine_env_file_prd.txt
+.venv

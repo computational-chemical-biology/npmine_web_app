@@ -1,5 +1,5 @@
 import requests
-from websiteNPMINE.compounds.utils import save_compound_image
+from websiteNPMINE.compounds.utils import classify_smiles, save_compound_image
 from rdkit import Chem
 from rdkit.Chem import Descriptors, rdMolDescriptors, AllChem
 from rdkit.Chem.inchi import MolToInchi, MolToInchiKey
@@ -55,32 +55,30 @@ class CompoundService:
 
         smiles = data["smiles"]
 
+        classification = classify_smiles(
+            smiles=smiles,
+            logger=current_app.logger
+        )
+
         class_results = None
         superclass_results = None
         pathway_results = None
-        isglycoside = None
+        isglycoside = False
 
-        try:
-            np_response = requests.get(
-                "https://npclassifier.gnps2.org/classify",
-                params={"smiles": smiles},
-                timeout=20
+        if classification["success"]:
+            np_data = classification["data"]
+
+            class_results = np_data["class_results"]
+            superclass_results = np_data["superclass_results"]
+            pathway_results = np_data["pathway_results"]
+            isglycoside = np_data["isglycoside"]
+
+        else:
+            current_app.logger.warning(
+                "NPClassifier failed for smiles=%s error=%s",
+                smiles,
+                classification["error"]
             )
-
-            if np_response.status_code == 200:
-                np_data = np_response.json()
-                class_results = ', '.join(np_data.get('class_results', []))
-                superclass_results = ', '.join(np_data.get('superclass_results', []))
-                pathway_results = ', '.join(np_data.get('pathway_results', []))
-                isglycoside = np_data.get('isglycoside', False)
-            else:
-                current_app.logger.warning(
-                    "NP classifier request returned status %s for smiles %s",
-                    np_response.status_code,
-                    smiles,
-                )
-        except Exception:
-            current_app.logger.exception("NP classifier error")
 
         try:
             from websiteNPMINE.compounds.routes import fetch_pubchem_data
@@ -113,7 +111,7 @@ class CompoundService:
                 compound.compound_image = img_path
                 db.session.commit()
 
-            return compound, None
+            return compound, None, "NPClassifier Was Used To Classify Compound"
 
         except Exception as e:
             db.session.rollback()

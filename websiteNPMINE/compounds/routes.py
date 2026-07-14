@@ -84,7 +84,7 @@ def registerCompound():
                 continue
 
             if smiles_input:
-                compound, err = CompoundService.create_from_smiles(
+                compound, err, method_used = CompoundService.create_from_smiles(
                     smiles=smiles_input,
                     doi_obj=existing_doi,
                     user_id=current_user.id,
@@ -92,6 +92,9 @@ def registerCompound():
                     db=db,
                     compound_name=compound_name_input,
                 )
+                
+                if method_used:
+                    flash(method_used, 'success')
 
                 if err:
                     flash(f'Compound {i+1}: {err}', 'error')
