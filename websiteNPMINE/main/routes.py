@@ -26,8 +26,9 @@ def can_view_compound(compound):
     if current_user.role_id == 1 or current_user.id == compound.user_id:
         return True
 
-    return compound.groups.filter(
-        Group.members.any(Accounts.id == current_user.id)
+    return AccountGroup.query.filter(
+        AccountGroup.account_id == current_user.id,
+        AccountGroup.group_id.in_(compound.groups.with_entities(Group.id))
     ).first() is not None
 
 
@@ -134,7 +135,9 @@ def data():
         ownership_filter = or_(
             Compounds.status == 'public',
             Compounds.user_id == current_user.id,
-            Compounds.groups.any(Group.members.any(Accounts.id == current_user.id))
+            Compounds.groups.any(
+                Group.memberships.any(AccountGroup.account_id == current_user.id)
+            )
         )
         base_query = base_query.filter(ownership_filter)
     else:

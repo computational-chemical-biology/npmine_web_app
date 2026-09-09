@@ -39,6 +39,22 @@
               {% endfor %}
             </ul>
 
+            <h3 class="h6">Shared Structures</h3>
+            {% if group.compounds.count() %}
+            <ul class="list-group mb-3">
+              {% for compound in group.compounds.all()|sort(attribute='id') %}
+              <li class="list-group-item d-flex justify-content-between">
+                <a href="{{ url_for('main.compound', compound_id=compound.id) }}">
+                  {{ compound.compound_name or 'Compound #' ~ compound.id }}
+                </a>
+                <span class="text-muted">{{ compound.status|capitalize }}</span>
+              </li>
+              {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-muted">No structures shared with this group yet.</p>
+            {% endif %}
+
             {% if group.user_id == current_user.id %}
             <form method="POST" action="{{ url_for('groups.add_member', group_id=group.id) }}" class="row g-2">
               {{ invite_form.hidden_tag() }}
