@@ -84,11 +84,18 @@ def registerCompound():
 
         existing_doi = DOI.query.filter_by(doi=doi).first()
         if not existing_doi:
-            new_doi = DOI(doi=doi)
-            db.session.add(new_doi)
-            db.session.commit()
-            existing_doi = new_doi
-        else:   
+            flash(f"Creating new DOI: {doi}")
+            if not doi or doi.strip() == "":
+                new_doi = DOI(doi="")
+                db.session.add(new_doi)
+                db.session.commit()
+                existing_doi = new_doi
+            else:
+                new_doi = DOI(doi=doi)
+                db.session.add(new_doi)
+                db.session.commit()
+                existing_doi = new_doi
+        else:
             flash('DOI already in database!', 'info')
 
         compound_blocks = request.form.getlist('inchikey')
@@ -256,6 +263,30 @@ def registerCompound():
                     db.session.commit()
                 created_count += 1
 
+            if genus and not species:
+                existing_taxon = Taxa.query.filter_by(verbatim=f"{genus} sp").first()
+                if not existing_taxon:
+                    taxon = Taxa(
+                        article_url=doi,
+                        verbatim=f"{genus} sp",
+                        user_id=current_user.id
+                    )
+                    db.session.add(taxon)
+                    db.session.commit()
+
+                    taxon.dois.append(existing_doi)
+            elif species and not genus:
+                existing_taxon = Taxa.query.filter_by(verbatim=f"{species}").first()
+                if not existing_taxon:
+                    taxon = Taxa(
+                        article_url=doi,
+                        verbatim=f"{species}",
+                        user_id=current_user.id
+                    )
+                    db.session.add(taxon)
+                    db.session.commit()
+
+                    taxon.dois.append(existing_doi)
             if genus and species:
                 existing_taxon = Taxa.query.filter_by(verbatim=f"{genus} {species}").first()
                 if not existing_taxon:
@@ -417,7 +448,7 @@ def search_taxon():
         results = (
             Taxa.query
             .join(Taxa.dois) 
-            .join(DOI.compounds)  
+            .outerjoin(DOI.compounds)  
             .filter(Compounds.status == 'public') 
             .filter(Taxa.verbatim.ilike(f"%{q}%"))  
             .distinct()
