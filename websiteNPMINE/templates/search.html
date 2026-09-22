@@ -138,6 +138,8 @@
                   <th>SMILES</th>
                   <th>InChI Key</th>
                   <th>DOIs</th>
+                  <th>Journal</th>
+                  <th>Related Taxa</th>
               </tr>
           </thead>
           <tbody id="results">
@@ -147,6 +149,14 @@
                       <td>{{ result.smiles }}</td>
                       <td>{{ result.inchi_key }}</td>
                       <td>{{ result.dois }}</td>
+                      <td>{{ result.journal or '-' }}</td>
+                      <td>
+                        {% for taxon in result.related_taxa %}
+                          {{ taxon.verbatim }}{% if not loop.last %}, {% endif %}
+                        {% else %}
+                          -
+                        {% endfor %}
+                      </td>
                   </tr>
               {% endfor %}
           </tbody>

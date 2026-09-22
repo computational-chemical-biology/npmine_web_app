@@ -17,6 +17,9 @@ main = Blueprint('main', __name__)
 
 
 def can_view_compound(compound):
+    if compound.deleted_at is not None:
+        return False
+
     if compound.status == 'public':
         return True
 
@@ -224,7 +227,12 @@ def data():
 
 @main.route('/compound/<int:compound_id>')
 def compound(compound_id):
-    compound = Compounds.query.get(compound_id)
+    compound = (
+        Compounds.active()
+        .options(db.joinedload(Compounds.dois).joinedload(DOI.taxa))
+        .filter_by(id=compound_id)
+        .first()
+    )
     logged_in = current_user.is_authenticated  
     if not compound:
         abort(404)
@@ -284,12 +292,10 @@ def article(article_id):
     if not doi_record:
         abort(404)
     
-    if logged_in:
-        compounds = [compound for compound in doi_record.compounds 
-                     if compound.status == 'public' or compound.user_id == current_user.id]
-    else:
-        compounds = [compound for compound in doi_record.compounds 
-                     if compound.status == 'public']
+    compounds = [compound for compound in doi_record.compounds if can_view_compound(compound)]
+
+    if not compounds:
+        abort(404)
 
     if compounds:
         first_compound = compounds[0]
@@ -338,30 +344,19 @@ def profile(profile_id):
     if not user:
         abort(404) 
 
-    public_compounds = Compounds.query.filter_by(user_id=profile_id, status='public').all()
-    private_compounds = Compounds.query.filter_by(user_id=profile_id, status='private').all()
+    public_compounds = Compounds.active().filter_by(user_id=profile_id, status='public').all()
+    private_compounds = Compounds.active().filter_by(user_id=profile_id, status='private').all()
 
     return render_template('profile.html', logged_in=logged_in, user=user, public_compounds=public_compounds, private_compounds=private_compounds)
 
 def delete_compound_and_related(compound):
-    for doi in compound.dois:
-        if len(doi.compounds) == 1:
-            for taxon in doi.taxa:
-                taxon_related_compounds = sum(
-                    len(d.compounds) for d in taxon.dois if d != doi
-                )
-                if taxon_related_compounds == 0:
-                    db.session.delete(taxon)
-
-            DOI.soft_delete(doi)
-
-    Compounds.soft_delete(compound)
+    compound.soft_delete()
 
 @main.route('/compound/<int:compound_id>/delete', methods=['POST'])
 @csrf.exempt
 @login_required
 def delete_compound(compound_id):
-    compound = Compounds.query.get_or_404(compound_id)
+    compound = Compounds.active().filter_by(id=compound_id).first_or_404()
 
     if not current_user.role_id == 1 and current_user.id != compound.user_id:
         flash("You don't have permission to delete this compound.", "error")
@@ -382,7 +377,7 @@ def delete_compound(compound_id):
 @csrf.exempt
 @login_required
 def toggle_privacy(compound_id):
-    compound = Compounds.query.get_or_404(compound_id)
+    compound = Compounds.active().filter_by(id=compound_id).first_or_404()
 
     if current_user.id != compound.user_id:
         abort(403)  

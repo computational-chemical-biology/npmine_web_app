@@ -69,6 +69,20 @@
                   </ul>
               </td>
           </tr>
+          <tr>
+              <th scope="row">Journal</th>
+              <td>{{ compound.journal or '-' }}</td>
+          </tr>
+          <tr>
+              <th scope="row">Taxa</th>
+              <td>
+                  {% for taxon in compound.related_taxa %}
+                  {{ taxon.verbatim }}{% if not loop.last %}, {% endif %}
+                  {% else %}
+                  -
+                  {% endfor %}
+              </td>
+          </tr>
       </tbody>
   </table>
   <h2>Groups</h2>

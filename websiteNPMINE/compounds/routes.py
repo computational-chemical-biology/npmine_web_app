@@ -1,4 +1,4 @@
-from sqlalchemy import or_
+from sqlalchemy import and_, or_
 from flask import Blueprint, render_template, flash, redirect, url_for, request, current_app, g,jsonify, Response, abort
 from flask_login import login_required, current_user
 from websiteNPMINE.compounds.compound_service import CompoundService
@@ -38,19 +38,22 @@ def can_edit_compound(compound):
     ).first() is not None
 
 
-def visible_compounds_query():
-    query = Compounds.query
-
+def visible_compounds_filter():
+    visibility_filter = Compounds.status == 'public'
     if current_user.is_authenticated:
-        return query.filter(or_(
+        visibility_filter = or_(
             Compounds.status == 'public',
             Compounds.user_id == current_user.id,
             Compounds.groups.any(
                 Group.memberships.any(AccountGroup.account_id == current_user.id)
             )
-        ))
+        )
 
-    return query.filter(Compounds.status == 'public')
+    return and_(Compounds.deleted_at.is_(None), visibility_filter)
+
+
+def visible_compounds_query():
+    return Compounds.query.filter(visible_compounds_filter())
 
 def save_compound_image(compound_id, smiles):
     filename = f"{compound_id}.png"
@@ -162,11 +165,14 @@ def registerCompound():
 
             existing_compound = None
             if inchikey:
-                existing_compound = Compounds.query.filter_by(inchi_key=inchikey).first()
+                existing_compound = Compounds.active().filter_by(inchi_key=inchikey).first()
             
             if existing_compound:
                 # Check if the current user already has this compound
-                user_compound = Compounds.query.filter_by(inchi_key=inchikey, user_id=current_user.id).first()
+                user_compound = Compounds.active().filter_by(
+                    inchi_key=inchikey,
+                    user_id=current_user.id
+                ).first()
                 if user_compound:
                     flash(f'You already have this compound with InChI Key {inchikey} in your records.', 'info')
                     duplicate_count += 1
@@ -388,6 +394,7 @@ def search():
     if q:
         results = visible_compounds_query() \
             .outerjoin(Compounds.dois) \
+            .options(db.joinedload(Compounds.dois).joinedload(DOI.taxa)) \
             .filter(
                 or_(
                     Compounds.compound_name.ilike(f"%{q}%"),
@@ -417,11 +424,11 @@ def search_doi():
         results = (
             DOI.query
             .join(DOI.compounds)  
-            .filter(Compounds.status == 'public')  
+            .filter(visible_compounds_filter())
             .filter(DOI.doi.ilike(f"%{q}%")) 
             .distinct()
             .options(
-                db.joinedload(DOI.compounds.and_(Compounds.status == 'public')),  
+                db.joinedload(DOI.compounds.and_(visible_compounds_filter())),
                 db.joinedload(DOI.taxa)  
             )
             .order_by(DOI.doi.asc())  
@@ -449,12 +456,12 @@ def search_taxon():
             Taxa.query
             .join(Taxa.dois) 
             .outerjoin(DOI.compounds)  
-            .filter(Compounds.status == 'public') 
+            .filter(visible_compounds_filter())
             .filter(Taxa.verbatim.ilike(f"%{q}%"))  
             .distinct()
             .options(
                 db.joinedload(Taxa.dois).joinedload(
-                    DOI.compounds.and_(Compounds.status == 'public')  
+                    DOI.compounds.and_(visible_compounds_filter())
                 ),
                 db.joinedload(Taxa.dois)  
             )
@@ -568,24 +575,50 @@ def search_structure():
     return render_template('search_results_structure.html', dfinal=search_res, query=query, logged_in=logged_in)
 
 
-def update_compound_relationships(compound, doi_data_list):
-    for existing_doi in compound.dois:
-        matching_doi_data = next((doi_data for doi_data in doi_data_list if doi_data['doi'] == existing_doi.doi), None)
-        if matching_doi_data:
-            existing_doi.some_attribute = matching_doi_data.get('some_attribute', existing_doi.some_attribute)
-            doi_data_list.remove(matching_doi_data)
-    
-    for new_doi_data in doi_data_list:
-        new_doi = DOI(**new_doi_data)
-        compound.dois.append(new_doi)
-    
-    db.session.commit()
+def normalized_form_values(entries, field_name):
+    return list(dict.fromkeys(
+        value
+        for entry in entries
+        if (value := (entry.data.get(field_name) or '').strip())
+    ))
+
+
+def sync_compound_references(compound, doi_values, taxa_values):
+    dois_by_value = {doi.doi: doi for doi in compound.dois}
+
+    compound.dois[:] = [doi for doi in compound.dois if doi.doi in doi_values]
+    for doi_value in doi_values:
+        doi = dois_by_value.get(doi_value) or DOI.query.filter_by(doi=doi_value).first()
+        if doi is None:
+            doi = DOI(doi=doi_value)
+            db.session.add(doi)
+        if doi not in compound.dois:
+            compound.dois.append(doi)
+
+    taxa_by_value = {
+        taxon.verbatim: taxon
+        for taxon in Taxa.query.filter(Taxa.verbatim.in_(taxa_values)).all()
+    } if taxa_values else {}
+    desired_taxa = []
+    for taxa_value in taxa_values:
+        taxon = taxa_by_value.get(taxa_value)
+        if taxon is None:
+            taxon = Taxa(
+                verbatim=taxa_value,
+                article_url=doi_values[0] if doi_values else None,
+                user_id=current_user.id,
+            )
+            db.session.add(taxon)
+        desired_taxa.append(taxon)
+
+    for doi in compound.dois:
+        doi.taxa = desired_taxa[:]
 
 @compounds.route('/compound/<int:id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_compound(id):
     logged_in = current_user.is_authenticated
-    compound = Compounds.query.get_or_404(id)
+    compound = Compounds.active().filter_by(id=id).first_or_404()
 
     if not can_edit_compound(compound):
         flash('You do not have permission to edit this compound.', 'danger')
@@ -595,11 +628,20 @@ def edit_compound(id):
 
     history_records = CompoundHistory.query.filter_by(compound_id=id).order_by(CompoundHistory.created_at.desc()).all()
 
-    form.dois.entries.clear()
-    for doi in compound.dois:
-        form.dois.append_entry({'doi': doi.doi})
+    if request.method == 'GET':
+        form.dois.entries.clear()
+        for doi in compound.dois:
+            form.dois.append_entry({'doi': doi.doi})
+        if not form.dois.entries:
+            form.dois.append_entry()
 
-    related_taxa = [taxa for doi in compound.dois for taxa in doi.taxa]
+        form.taxa.entries.clear()
+        for taxon in compound.related_taxa:
+            form.taxa.append_entry({'verbatim': taxon.verbatim})
+        if not form.taxa.entries:
+            form.taxa.append_entry()
+
+    related_taxa = compound.related_taxa
 
     if form.validate_on_submit():
         print("Form data:", form.data)
@@ -636,23 +678,22 @@ def edit_compound(id):
         compound.status = form.status.data
         compound.inchi_key = form.inchi_key.data or compound.inchi_key
 
-        print("DOIs before update:", [d.doi for d in compound.dois])
-        
-        form_doi_data_list = [entry.data['doi'] for entry in form.dois.entries]
+        doi_values = normalized_form_values(form.dois.entries, 'doi')
+        article_url = (form.article_url.data or '').strip()
+        if article_url and article_url not in doi_values:
+            doi_values.append(article_url)
+        taxa_values = normalized_form_values(form.taxa.entries, 'verbatim')
 
-        for existing_doi in compound.dois[:]:
-            if existing_doi.doi in form_doi_data_list:
-                form_doi_entry = next(entry for entry in form.dois.entries if entry.data['doi'] == existing_doi.doi)
-            else:
-                compound.dois.remove(existing_doi)
-                db.session.delete(existing_doi)
+        if taxa_values and not doi_values:
+            db.session.rollback()
+            flash('A DOI or article URL is required to associate Taxa.', 'danger')
+            return render_template(
+                'editCompound.html', form=form, compound=compound,
+                history_records=history_records, related_taxa=related_taxa,
+                logged_in=logged_in
+            )
 
-        for form_doi_entry in form.dois.entries:
-            form_doi_data = form_doi_entry.data
-            if not any(doi.doi == form_doi_data['doi'] for doi in compound.dois):
-                new_doi = DOI(doi=form_doi_data['doi'])
-                compound.dois.append(new_doi)
-                db.session.add(new_doi)
+        sync_compound_references(compound, doi_values, taxa_values)
 
         if compound.smiles != old_smiles:
             print("SMILES changed, updating image...")
@@ -695,7 +736,7 @@ def edit_compound(id):
 @login_required
 def revert_compound(history_id):
     history_record = CompoundHistory.query.get_or_404(history_id)
-    main_compound = Compounds.query.get_or_404(history_record.compound_id)
+    main_compound = Compounds.active().filter_by(id=history_record.compound_id).first_or_404()
 
     current_state_history = CompoundHistory(
         compound_id=main_compound.id,
@@ -730,15 +771,16 @@ def revert_compound(history_id):
 @compounds.route('/compound/<int:id>/delete', methods=['POST'])
 @login_required
 def delete_compound(id):
-    compound = Compounds.query.get_or_404(id)
+    compound = Compounds.active().filter_by(id=id).first_or_404()
+
+    if current_user.role_id != 1 and compound.user_id != current_user.id:
+        abort(403)
 
     try:
-        for doi in compound.dois:
-            DOI.soft_delete(doi)
-
-        Compounds.soft_delete(compound)
+        compound.soft_delete()
+        db.session.commit()
         flash('Compound deleted successfully!', 'success')
-        return redirect(url_for('main.index'))
+        return redirect(url_for('main.home'))
     except Exception as e:
         db.session.rollback()
         flash(f"An error occurred while deleting the compound: {e}", "danger")
@@ -747,9 +789,13 @@ def delete_compound(id):
 @compounds.route('/compound/<int:id>/restore', methods=['POST'])
 @login_required
 def restore_compound(id):
+    compound = Compounds.query.get_or_404(id)
+    if current_user.role_id != 1 and compound.user_id != current_user.id:
+        abort(403)
+
     try:
-        compound = Compounds.query.get_or_404(id)
-        compound.restore
+        compound.restore()
+        db.session.commit()
         return jsonify({"message": "Compound restored successfully"}), 200
     except Exception as e: 
         return jsonify({"message": "An error occurred while restoring the compound"}), 500
@@ -757,7 +803,7 @@ def restore_compound(id):
 @compounds.route('/download_compounds', methods=['GET'])
 def download_compounds():
     logged_in = current_user.is_authenticated
-    compounds = Compounds.query.filter_by(status='public').all()
+    compounds = Compounds.active().filter_by(status='public').all()
 
     if 'download' in request.args:  
         output = StringIO()
