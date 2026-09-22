@@ -84,7 +84,7 @@ def add_member(group_id):
 @groups.route('/compounds/<int:compound_id>/groups', methods=['POST'])
 @login_required
 def add_compound(compound_id):
-    compound = Compounds.query.get_or_404(compound_id)
+    compound = Compounds.active().filter_by(id=compound_id).first_or_404()
     if current_user.role_id != 1 and compound.user_id != current_user.id:
         abort(403)
 

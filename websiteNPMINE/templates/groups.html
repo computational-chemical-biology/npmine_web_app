@@ -40,9 +40,10 @@
             </ul>
 
             <h3 class="h6">Shared Structures</h3>
-            {% if group.compounds.count() %}
+            {% set active_compounds = group.compounds.filter_by(deleted_at=None).all() %}
+            {% if active_compounds %}
             <ul class="list-group mb-3">
-              {% for compound in group.compounds.all()|sort(attribute='id') %}
+              {% for compound in active_compounds|sort(attribute='id') %}
               <li class="list-group-item d-flex justify-content-between">
                 <a href="{{ url_for('main.compound', compound_id=compound.id) }}">
                   {{ compound.compound_name or 'Compound #' ~ compound.id }}

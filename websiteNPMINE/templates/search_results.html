@@ -10,9 +10,17 @@
                 <a href="https://doi.org/{{ doi.doi }}" target="_blank">{{ doi.doi }}</a>{% if not loop.last %}, {% endif %}
             {% endfor %}
         </td>
+        <td>{{ result.journal or '-' }}</td>
+        <td>
+            {% for taxon in result.related_taxa %}
+                {{ taxon.verbatim }}{% if not loop.last %}, {% endif %}
+            {% else %}
+                -
+            {% endfor %}
+        </td>
     </tr>
 {% else %}
     <tr>
-        <td colspan="4">No results found.</td>
+        <td colspan="6">No results found.</td>
     </tr>
 {% endfor %}

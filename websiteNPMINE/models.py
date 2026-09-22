@@ -208,6 +208,19 @@ class Compounds(db.Model):
     def __repr__(self):
         return f'Compounds: {self.id}'
 
+    @classmethod
+    def active(cls):
+        return cls.query.filter(cls.deleted_at.is_(None))
+
+    @property
+    def related_taxa(self):
+        taxa_by_id = {
+            taxon.id: taxon
+            for doi in self.dois
+            for taxon in doi.taxa
+        }
+        return sorted(taxa_by_id.values(), key=lambda taxon: taxon.verbatim or '')
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -232,12 +245,10 @@ class Compounds(db.Model):
     def soft_delete(self):
         self.deleted_at = datetime.utcnow()
         db.session.add(self)
-        db.session.commit()
 
     def restore(self):
         self.deleted_at = None
         db.session.add(self)
-        db.session.commit()
 
     history = db.relationship('CompoundHistory', 
         backref='compound', 

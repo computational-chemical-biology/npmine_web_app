@@ -53,17 +53,35 @@
               <h3>DOIs</h3>
               <div id="dois">
                   {% for doi_form in form.dois %}
-                      <div class="form-group">{{ doi_form.doi.label }} {{ doi_form.doi(class="form-control") }}</div>
+                      <div class="form-group reference-row">
+                        {{ doi_form.doi.label }}
+                        <div class="input-group">
+                          {{ doi_form.doi(class="form-control") }}
+                          <div class="input-group-append">
+                            <button type="button" class="btn btn-outline-danger remove-reference">Remove</button>
+                          </div>
+                        </div>
+                      </div>
                   {% endfor %}
               </div>
+              <button type="button" id="add-doi" class="btn btn-outline-secondary btn-sm mb-3">Add DOI</button>
 
               <!-- Taxa Section -->
               <h3>Taxa</h3>
               <div id="taxa">
                   {% for taxon_form in form.taxa %}
-                      <div class="form-group">{{ taxon_form.verbatim.label }} {{ taxon_form.verbatim(class="form-control") }}</div>
+                      <div class="form-group reference-row">
+                        {{ taxon_form.verbatim.label }}
+                        <div class="input-group">
+                          {{ taxon_form.verbatim(class="form-control") }}
+                          <div class="input-group-append">
+                            <button type="button" class="btn btn-outline-danger remove-reference">Remove</button>
+                          </div>
+                        </div>
+                      </div>
                   {% endfor %}
               </div>
+              <button type="button" id="add-taxon" class="btn btn-outline-secondary btn-sm mb-3">Add Taxon</button>
 
               <div class="form-group">{{ form.submit(class="btn btn-primary") }}</div>
           </form>
@@ -170,6 +188,37 @@
                   }
               } else {
                   console.error("JSME applet not initialized yet.");
+              }
+          });
+
+          function addReferenceRow(containerId, prefix, fieldName, label) {
+              const container = document.getElementById(containerId);
+              const indexes = Array.from(container.querySelectorAll(`input[name^="${prefix}-"]`))
+                  .map(input => Number.parseInt(input.name.split('-')[1], 10))
+                  .filter(Number.isFinite);
+              const index = indexes.length ? Math.max(...indexes) + 1 : 0;
+              const row = document.createElement('div');
+              row.className = 'form-group reference-row';
+              row.innerHTML = `
+                <label for="${prefix}-${index}-${fieldName}">${label}</label>
+                <div class="input-group">
+                  <input class="form-control" id="${prefix}-${index}-${fieldName}" name="${prefix}-${index}-${fieldName}" type="text">
+                  <div class="input-group-append">
+                    <button type="button" class="btn btn-outline-danger remove-reference">Remove</button>
+                  </div>
+                </div>`;
+              container.appendChild(row);
+          }
+
+          document.getElementById('add-doi').addEventListener('click', function () {
+              addReferenceRow('dois', 'dois', 'doi', 'DOI');
+          });
+          document.getElementById('add-taxon').addEventListener('click', function () {
+              addReferenceRow('taxa', 'taxa', 'verbatim', 'Verbatim');
+          });
+          document.addEventListener('click', function (event) {
+              if (event.target.classList.contains('remove-reference')) {
+                  event.target.closest('.reference-row').remove();
               }
           });
       });
